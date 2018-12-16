@@ -9,6 +9,7 @@ namespace Novel.Reptile.Entities
         public string ItemName { get; set; }
         public int BookId { get; set; }
         public int? ParentItemId { get; set; }
+        public string Content { get; set; }
         public int ItemLevel { get; set; }
         public DateTime? CreateTime { get; set; }
         public DateTime? UpdateTime { get; set; }

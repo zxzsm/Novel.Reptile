@@ -10,7 +10,7 @@ namespace Novel.Reptile.Entities
         public int? BookId { get; set; }
         public string Url { get; set; }
         public string CurrentRecod { get; set; }
-        public int SyncTypeId { get; set; }
+        public int SyncType { get; set; }
         public string Remark { get; set; }
         public DateTime? Created { get; set; }
         public DateTime? Updated { get; set; }

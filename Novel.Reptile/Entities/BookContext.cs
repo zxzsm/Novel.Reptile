@@ -22,7 +22,6 @@ namespace Novel.Reptile.Entities
         public virtual DbSet<BookItem> BookItem { get; set; }
         public virtual DbSet<BookReptileTask> BookReptileTask { get; set; }
         public virtual DbSet<BookShelf> BookShelf { get; set; }
-        public virtual DbSet<ReptileConfig> ReptileConfig { get; set; }
         public virtual DbSet<Sign> Sign { get; set; }
         public virtual DbSet<UserInfo> UserInfo { get; set; }
         public virtual DbSet<UserRead> UserRead { get; set; }
@@ -106,6 +105,8 @@ namespace Novel.Reptile.Entities
             {
                 entity.HasKey(e => e.ItemId);
 
+                entity.Property(e => e.Content).HasColumnType("ntext");
+
                 entity.Property(e => e.CreateTime)
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("(getdate())");
@@ -143,25 +144,6 @@ namespace Novel.Reptile.Entities
                 entity.Property(e => e.CreateTime).HasColumnType("datetime");
 
                 entity.Property(e => e.UpdateTime).HasColumnType("datetime");
-            });
-
-            modelBuilder.Entity<ReptileConfig>(entity =>
-            {
-                entity.Property(e => e.Id).ValueGeneratedNever();
-
-                entity.Property(e => e.AurthorTag).HasMaxLength(50);
-
-                entity.Property(e => e.ImageTag).HasMaxLength(50);
-
-                entity.Property(e => e.ItemTag).HasMaxLength(50);
-
-                entity.Property(e => e.NameTag).HasMaxLength(50);
-
-                entity.Property(e => e.Source)
-                    .IsRequired()
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.SummaryTag).HasMaxLength(50);
             });
 
             modelBuilder.Entity<Sign>(entity =>
