@@ -18,24 +18,29 @@ namespace Novel.Reptile
         {
             EncodingProvider provider = CodePagesEncodingProvider.Instance;
             Encoding.RegisterProvider(provider);
-            string url = "http://www.biquyun.com/18_18727/";
             List<BookReptileTask> task = null;
             using (BookContext context = new BookContext())
             {
                 task = context.BookReptileTask.ToList();
-
             }
+            MyTaskList myTaskList = new MyTaskList();
+            myTaskList.Completed += MyTaskList_Completed;
             foreach (var item in task)
             {
                 if (item.SyncType == 2)
                 {
                     IBookGrah grah = new BiQuYunBookGrah();
                     grah.Url = item.Url;
-                    grah.Grah();
+                    myTaskList.Tasks.Add(grah.Grah);
                 }
-
             }
+            myTaskList.Start();
+            Console.ReadLine();
+        }
 
+        private static void MyTaskList_Completed()
+        {
+            Console.WriteLine("一个任务结束");
         }
 
         //顶点抓取

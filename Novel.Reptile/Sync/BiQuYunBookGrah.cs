@@ -1,4 +1,5 @@
-﻿using AngleSharp.Parser.Html;
+﻿using AngleSharp.Dom;
+using AngleSharp.Parser.Html;
 using Novel.Reptile.Entities;
 using System;
 using System.Collections.Generic;
@@ -36,44 +37,10 @@ namespace Novel.Reptile.Sync
             var summary = document.QuerySelector("#intro").InnerHtml;
             string spell = Pinyin.GetPinyin(bookName).Replace(" ", "");
             string filePath = string.Format("{0}{1}{2}", ConstCommon.SAVEFOLDER, spell, Path.GetExtension(imageUrl));
+            //保存图片
             SaveImageUrl(imageUrl, filePath);
-            Book book = null;
-
-            book = DB.Book.FirstOrDefault(m => m.BookName == bookName);
-            if (book == null)
-            {
-                book = new Book
-                {
-                    BookName = bookName,
-                    BookAuthor = author,
-                    BookReleaseTime = DateTime.Today,
-                    BookState = 0,
-                    BookSummary = summary,
-                    BookImage = "/files/bookimages/" + spell + Path.GetExtension(imageUrl),
-                    CreateTime = DateTime.Now,
-                    UpdateTime = DateTime.Now,
-                    ReadVolume = 0
-                };
-                DB.Book.Add(book);
-            }
-            DB.SaveChanges();
-
-            BookReptileTask reptileTask = DB.BookReptileTask.FirstOrDefault(m => m.BookId == book.BookId && m.SyncType == Type);
-            if (reptileTask == null)
-            {
-                reptileTask = new BookReptileTask
-                {
-                    BookId = book.BookId,
-                    BookName = book.BookName,
-                    SyncType = Type,
-                    Created = DateTime.Now,
-                    CurrentRecod = "",
-                    Updated = DateTime.Now,
-                    Url = Url,
-                };
-                DB.BookReptileTask.Add(reptileTask);
-                DB.SaveChanges();
-            }
+            Book book = GetBook(bookName, author, summary, "/files/bookimages/" + spell + Path.GetExtension(imageUrl));
+            BookReptileTask reptileTask = GetBookReptileTask(book);
 
 
             //目录
@@ -82,30 +49,54 @@ namespace Novel.Reptile.Sync
             bool isSaveChange = string.IsNullOrWhiteSpace(reptileTask.CurrentRecod);
             foreach (var item in items)
             {
+
                 if (isSaveChange)
                 {
+                    string itemName = item.InnerHtml.Trim();
                     string href = item.GetAttribute("href");
                     href = "http://www.biquyun.com" + href;
-                    string itemName = item.InnerHtml;
                     string content = GetContent(href);
-                    BookItem bookItem = new BookItem()
+                    var bookItem = DB.BookItem.FirstOrDefault(m => m.BookId == book.BookId && m.ItemName == itemName);
+                    if (bookItem == null)
                     {
-                        BookId = book.BookId,
-                        ItemName = itemName,
-                        CreateTime = DateTime.Now,
-                        Content = content,
-                        UpdateTime = DateTime.Now
-                    };
+                        bookItem = new BookItem()
+                        {
+                            BookId = book.BookId,
+                            ItemName = itemName,
+                            CreateTime = DateTime.Now,
+                            Content = content,
+                            UpdateTime = DateTime.Now
+                        };
+                        DB.BookItem.Add(bookItem);
+                    }
+                    else
+                    {
+                        if (string.IsNullOrWhiteSpace(bookItem.Content))
+                        {
+                            bookItem.Content = content;
+                        }
+                    }
                     Console.WriteLine("{0}:{1}:{2}", book.BookName, bookItem.ItemName, href);
-                    DB.BookItem.Add(bookItem);
-                    reptileTask.CurrentRecod = item.InnerHtml.Trim();
+                    reptileTask.CurrentRecod = itemName;
                     reptileTask.Updated = DateTime.Now;
+                    book.UpdateTime = DateTime.Today;
                     DB.SaveChanges();
-                    Thread.Sleep(1000);
                     continue;
                 }
                 if (!isSaveChange && item.InnerHtml.Trim() == reptileTask.CurrentRecod.Trim())
                 {
+
+                    string itemName = item.InnerHtml.Trim();
+                    var bookItem = DB.BookItem.FirstOrDefault(m => m.BookId == book.BookId && m.ItemName == itemName);
+                    if (bookItem != null && string.IsNullOrWhiteSpace(bookItem.Content))
+                    {
+                        string href = item.GetAttribute("href");
+                        href = "http://www.biquyun.com" + href;
+                        string content = GetContent(href);
+                        bookItem.Content = content;
+                        bookItem.UpdateTime = DateTime.Now;
+                        DB.SaveChanges();
+                    }
                     isSaveChange = true;
                     continue;
                 }
@@ -114,13 +105,12 @@ namespace Novel.Reptile.Sync
         }
         private string GetContent(string url)
         {
-            var html = GetResponse(url,"GBK");
+            var html = GetResponse(url, "GBK");
             var parser = new HtmlParser();
             var document = parser.Parse(html);
             var content = document.GetElementById("content");
             return content.InnerHtml;
         }
-
         public void SaveImageUrl(string url, string saveFilePath)
         {
             if (File.Exists(saveFilePath))
