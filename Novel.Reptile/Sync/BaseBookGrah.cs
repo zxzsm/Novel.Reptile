@@ -10,6 +10,7 @@ namespace Novel.Reptile.Sync
 {
     public class BaseBookGrah : IBookGrah, IDisposable
     {
+        object _sync = new object();
         public virtual BookContext DB
         {
             get;
@@ -51,64 +52,71 @@ namespace Novel.Reptile.Sync
 
         public Book GetBook(string bookName, string author, string summary, string bookImage)
         {
-            Book book = null;
-            book = DB.Book.FirstOrDefault(m => m.BookName == bookName);
-            if (book == null)
+            lock (_sync)
             {
-                book = new Book
+                Book book = null;
+                book = DB.Book.FirstOrDefault(m => m.BookName == bookName);
+                if (book == null)
                 {
-                    BookName = bookName,
-                    BookAuthor = author,
-                    BookReleaseTime = DateTime.Today,
-                    BookState = 0,
-                    BookSummary = summary,
-                    BookImage = bookImage,
-                    CreateTime = DateTime.Now,
-                    UpdateTime = DateTime.Now,
-                    ReadVolume = 0
-                };
-                DB.Book.Add(book);
-                DB.SaveChanges();
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(book.BookImage))
-                {
-                    book.BookImage = bookImage;
+                    book = new Book
+                    {
+                        BookName = bookName,
+                        BookAuthor = author,
+                        BookReleaseTime = DateTime.Today,
+                        BookState = 0,
+                        BookSummary = summary,
+                        BookImage = bookImage,
+                        CreateTime = DateTime.Now,
+                        UpdateTime = DateTime.Now,
+                        ReadVolume = 0
+                    };
+                    DB.Book.Add(book);
+                    DB.SaveChanges();
                 }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(book.BookImage))
+                    {
+                        book.BookImage = bookImage;
+                    }
+                }
+                return book;
             }
-            return book;
         }
 
         public BookReptileTask GetBookReptileTask(Book book)
         {
-            BookReptileTask reptileTask = DB.BookReptileTask.FirstOrDefault(m => m.Url == Url.Trim() && m.SyncType == Type);
-            if (reptileTask == null)
+            lock (_sync)
             {
-                reptileTask = new BookReptileTask
+                BookReptileTask reptileTask = DB.BookReptileTask.FirstOrDefault(m => m.Url == Url.Trim() && m.SyncType == Type);
+                if (reptileTask == null)
                 {
-                    BookId = book.BookId,
-                    BookName = book.BookName,
-                    SyncType = Type,
-                    Created = DateTime.Now,
-                    CurrentRecod = "",
-                    Updated = DateTime.Now,
-                    Url = Url.Trim(),
-                };
-                DB.BookReptileTask.Add(reptileTask);
+                    reptileTask = new BookReptileTask
+                    {
+                        BookId = book.BookId,
+                        BookName = book.BookName,
+                        SyncType = Type,
+                        Created = DateTime.Now,
+                        CurrentRecod = "",
+                        Updated = DateTime.Now,
+                        Url = Url.Trim(),
+                    };
+                    DB.BookReptileTask.Add(reptileTask);
+                }
+                if (!reptileTask.BookId.HasValue)
+                {
+                    reptileTask.BookId = book.BookId;
+                    reptileTask.BookName = book.BookName;
+                }
+                DB.SaveChanges();
+                return reptileTask;
             }
-            if (!reptileTask.BookId.HasValue)
-            {
-                reptileTask.BookId = book.BookId;
-                reptileTask.BookName = book.BookName;
-            }
-            DB.SaveChanges();
-            return reptileTask;
         }
 
         public void Dispose()
         {
-            DB = null;
+            using (DB) { }
+
         }
     }
 }

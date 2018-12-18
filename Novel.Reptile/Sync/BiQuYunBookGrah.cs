@@ -28,6 +28,7 @@ namespace Novel.Reptile.Sync
             var document = parser.Parse(html);
             //book name
             var bookName = document.QuerySelector("#info h1").InnerHtml;
+            Console.WriteLine("{0}:读取中........................................", bookName);
             //图片
             string imageUrl = document.QuerySelector("#fmimg img").GetAttribute("src");
             //作者
@@ -41,15 +42,17 @@ namespace Novel.Reptile.Sync
             SaveImageUrl(imageUrl, filePath);
             Book book = GetBook(bookName, author, summary, "/files/bookimages/" + spell + Path.GetExtension(imageUrl));
             BookReptileTask reptileTask = GetBookReptileTask(book);
-
-
             //目录
             var items = document.QuerySelectorAll("#list dd a");
-
+            var last = items.LastOrDefault();
+            if (!string.IsNullOrWhiteSpace(reptileTask.CurrentRecod)&& last!=null&& last.InnerHtml.Trim() == reptileTask.CurrentRecod.Trim())
+            {
+                Console.WriteLine("{0}:已同步到最后结束........................................", bookName);
+                return;
+            }
             bool isSaveChange = string.IsNullOrWhiteSpace(reptileTask.CurrentRecod);
             foreach (var item in items)
             {
-
                 if (isSaveChange)
                 {
                     string itemName = item.InnerHtml.Trim();
@@ -101,7 +104,7 @@ namespace Novel.Reptile.Sync
                     continue;
                 }
             }
-
+            Console.WriteLine("{0}:结束........................................", bookName);
         }
         private string GetContent(string url)
         {
