@@ -14,17 +14,33 @@ namespace Novel.Reptile
 {
     class Program
     {
+        static MyTaskList myTaskList = new MyTaskList();
         static void Main(string[] args)
         {
             EncodingProvider provider = CodePagesEncodingProvider.Instance;
             Encoding.RegisterProvider(provider);
+
+
+            myTaskList.Completed += MyTaskList_Completed;
+            myTaskList.AllTaskCompleted += MyTaskList_AllTaskCompleted;
+            StartTask(myTaskList);
+            Console.ReadLine();
+        }
+
+        private static void MyTaskList_AllTaskCompleted()
+        {
+            Console.WriteLine("新任务开始，重新启动");
+            StartTask(myTaskList);
+        }
+
+        private static void StartTask(MyTaskList myTaskList)
+        {
+            myTaskList.Tasks.Clear();
             List<BookReptileTask> task = null;
             using (BookContext context = new BookContext())
             {
                 task = context.BookReptileTask.ToList();
             }
-            MyTaskList myTaskList = new MyTaskList();
-            myTaskList.Completed += MyTaskList_Completed;
             foreach (var item in task)
             {
                 if (item.SyncType == 2)
@@ -35,7 +51,6 @@ namespace Novel.Reptile
                 }
             }
             myTaskList.Start();
-            Console.ReadLine();
         }
 
         private static void MyTaskList_Completed()

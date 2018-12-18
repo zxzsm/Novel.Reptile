@@ -8,14 +8,19 @@ namespace Novel.Reptile
     public class MyTaskList
     {
         public List<Action> Tasks = new List<Action>();
+        private int taskCount = 0;
 
         public void Start()
         {
             for (var i = 0; i < 15; i++)
                 StartAsync();
+            taskCount = Tasks.Count;
         }
 
+        private object _sync = new object();
+
         public event Action Completed;
+        public event Action AllTaskCompleted;
 
         public void StartAsync()
         {
@@ -27,16 +32,22 @@ namespace Novel.Reptile
                     Tasks.Remove(t);
                     ThreadPool.QueueUserWorkItem(h =>
                     {
+
                         try
-                        { 
+                        {
                             t();
-                          
+                            
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine(ex.ToString()); 
+                            Console.WriteLine(ex.ToString());
                         }
+                        taskCount--;
                         StartAsync();
+                        if (taskCount <= 0)
+                        {
+                            AllTaskCompleted?.Invoke();
+                        }
                     });
                 }
                 else Completed?.Invoke();
