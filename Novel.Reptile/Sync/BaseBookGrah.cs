@@ -1,4 +1,6 @@
-﻿using Novel.Reptile.Entities;
+﻿using AngleSharp;
+using AngleSharp.Parser.Html;
+using Novel.Reptile.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,10 +48,28 @@ namespace Novel.Reptile.Sync
                     var t = response.Content.ReadAsStringAsync();
                     result = t.Result;
                 }
+                //else
+                //{
+                //    var t = response.Content.ReadAsStringAsync();
+                //    SimpleScriptingSample(t.Result);
+                //}
             }
             return result;
         }
+        void SimpleScriptingSample(string source)
+        {
+            //We require a custom configuration
+            var config = Configuration.Default.WithJavaScript();
+            //Let's create a new parser using this configuration
+            var parser = new HtmlParser(config);
 
+            //This is our sample source, we will set the title and write on the document
+
+            var document = parser.Parse(source);
+
+            //Modified HTML will be output
+            Console.WriteLine(document.DocumentElement.OuterHtml);
+        }
         public Book GetBook(string bookName, string author, string summary, string bookImage)
         {
             lock (_sync)

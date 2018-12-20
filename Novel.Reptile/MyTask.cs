@@ -42,12 +42,8 @@ namespace Novel.Reptile
                         {
                             Console.WriteLine(ex.ToString());
                         }
-                        taskCount--;
                         StartAsync();
-                        if (taskCount <= 0)
-                        {
-                            AllTaskCompleted?.Invoke();
-                        }
+                        
                     });
                 }
                 else Completed?.Invoke();

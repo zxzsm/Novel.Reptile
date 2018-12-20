@@ -13,6 +13,7 @@ namespace Novel.Reptile.Entities
         public string BookSummary { get; set; }
         public int? BookState { get; set; }
         public int ReadVolume { get; set; }
+        public int Recommend { get; set; }
         public DateTime? CreateTime { get; set; }
         public DateTime? UpdateTime { get; set; }
     }

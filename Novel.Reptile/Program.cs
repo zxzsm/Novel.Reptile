@@ -23,7 +23,15 @@ namespace Novel.Reptile
 
             myTaskList.Completed += MyTaskList_Completed;
             myTaskList.AllTaskCompleted += MyTaskList_AllTaskCompleted;
-            StartTask(myTaskList);
+
+            KSSZBookGrah bookGrah = new KSSZBookGrah();
+            bookGrah.Url = "https://www.kanshushenzhan.com/4334/";
+            bookGrah.GrahAsync();
+            //StartTask(myTaskList);
+            //while (DateTime.Now.Hour >= 0)
+            //{
+            //    NewStart();
+            //}
             Console.ReadLine();
         }
 
@@ -53,91 +61,35 @@ namespace Novel.Reptile
             myTaskList.Start();
         }
 
-        private static void MyTaskList_Completed()
+        private static void NewStart()
         {
-            Console.WriteLine("一个任务结束");
-        }
-
-        //顶点抓取
-        private static void DingDian(string url)
-        {
-            var html = GetResponse(url);
-            var parser = new HtmlParser();
-            var document = parser.Parse(html);
-            var content = document.GetElementById("content");
-            var title = content.QuerySelector("dd h1").InnerHtml.Replace("全文阅读", "").Trim();
-            string imageUrl = content.QuerySelector("dd .fl .hst img").GetAttribute("src");
-            string author = content.QuerySelectorAll("dd .fl table tbody tr td")[1].InnerHtml;
-            var summary = content.QuerySelectorAll("dd")[3].QuerySelectorAll("p")[1].InnerHtml;
-            var itemsUrl = content.QuerySelector(".btnlinks .read").GetAttribute("href");
-            //string filePath = string.Format("{0}{1}{2}", GetSaveFolder(), Pinyin.GetPinyin(title).Replace(" ", ""), Path.GetExtension(imageUrl));
-            //SaveImageUrl(imageUrl, filePath);
-            GetItems(itemsUrl);
-            Console.WriteLine(html);
-        }
-
-        public static void GetItems(string url)
-        {
-            var html = GetResponse(url);
-            var parser = new HtmlParser();
-            var document = parser.Parse(html);
-
-            var items = document.QuerySelectorAll(".bdsub dl table  tr td a");
-            foreach (var item in items)
+            List<BookReptileTask> task = null;
+            using (BookContext context = new BookContext())
             {
-                string href = item.GetAttribute("href");
-                string itemName = item.InnerHtml;
-                string content = GetContent(href);
+                var book = context.Book.Where(m => m.BookState.HasValue && m.BookState.Value == 1);
+                task = context.BookReptileTask.Where(m => !book.Any(p => p.BookId == m.BookId)).OrderByDescending(m => m.Id).ToList();
             }
-
-        }
-
-        public static string GetContent(string url)
-        {
-            var html = GetResponse(url);
-            var parser = new HtmlParser();
-            var document = parser.Parse(html);
-            var content = document.GetElementById("contents");
-            return content.InnerHtml;
-        }
-        public static string GetResponse(string url)
-        {
-            string result = string.Empty;
-            using (HttpClient httpClient = new HttpClient(new HttpClientHandler() { AutomaticDecompression = DecompressionMethods.GZip }))
+            foreach (var item in task)
             {
-                httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/html"));
-                HttpResponseMessage response = httpClient.GetAsync(url).Result;
-
-                if (response.IsSuccessStatusCode)
+                if (item.SyncType == 2)
                 {
-                    response.Content.Headers.ContentType.CharSet = "utf-8";
-                    var t = response.Content.ReadAsStringAsync();
-                    result = t.Result;
+                    IBookGrah grah = new BiQuYunBookGrah();
+                    grah.Url = item.Url;
+                    try
+                    {
+                        grah.Grah();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 }
             }
-            return result;
         }
 
-        public static string GetSaveFolder()
+        private static void MyTaskList_Completed()
         {
-            string folder = Directory.GetCurrentDirectory();
-            string saveFolder = string.Format("{0}{1}", folder, "/files/bookimages/");
-            if (!Directory.Exists(saveFolder))
-            {
-                Directory.CreateDirectory(saveFolder);
-            }
-            return saveFolder;
-        }
-        public static void SaveImageUrl(string url, string saveFilePath)
-        {
-            var client = new HttpClient();
-            System.IO.FileStream fs;
-            //文件名：序号+.jpg。可指定范围，以下是获取100.jpg~500.jpg.
-            var uri = new Uri(Uri.EscapeUriString(url));
-            byte[] urlContents = client.GetByteArrayAsync(uri).Result;
-            fs = new System.IO.FileStream(saveFilePath, System.IO.FileMode.OpenOrCreate);
-            fs.Write(urlContents, 0, urlContents.Length);
-
+            Console.WriteLine("一个任务结束！！！！！！！！！！！！！！！");
         }
     }
 }
