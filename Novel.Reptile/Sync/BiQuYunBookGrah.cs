@@ -42,67 +42,81 @@ namespace Novel.Reptile.Sync
             SaveImageUrl(imageUrl, filePath);
             Book book = GetBook(bookName, author, summary, "/files/bookimages/" + spell + Path.GetExtension(imageUrl));
             BookReptileTask reptileTask = GetBookReptileTask(book);
-            //目录
-            var items = document.QuerySelectorAll("#list dd a");
-            var last = items.LastOrDefault();
-            if (!string.IsNullOrWhiteSpace(reptileTask.CurrentRecod)&& last!=null&& last.InnerHtml.Trim() == reptileTask.CurrentRecod.Trim())
+            try
             {
-                Console.WriteLine("{0}:已同步到最后结束........................................", bookName);
-                return;
-            }
-            bool isSaveChange = string.IsNullOrWhiteSpace(reptileTask.CurrentRecod);
-            foreach (var item in items)
-            {
-                if (isSaveChange)
+                //目录
+                var items = document.QuerySelectorAll("#list dd a");
+                var last = items.LastOrDefault();
+                if (!string.IsNullOrWhiteSpace(reptileTask.CurrentRecod) && last != null && last.InnerHtml.Trim() == reptileTask.CurrentRecod.Trim())
                 {
-                    string itemName = item.InnerHtml.Trim();
-                    string href = item.GetAttribute("href");
-                    href = "http://www.biquyun.com" + href;
-                    string content = GetContent(href);
-                    var bookItem = DB.BookItem.FirstOrDefault(m => m.BookId == book.BookId && m.ItemName == itemName);
-                    if (bookItem == null)
-                    {
-                        bookItem = new BookItem()
-                        {
-                            BookId = book.BookId,
-                            ItemName = itemName,
-                            CreateTime = DateTime.Now,
-                            Content = content,
-                            UpdateTime = DateTime.Now
-                        };
-                        DB.BookItem.Add(bookItem);
-                    }
-                    else
-                    {
-                        if (string.IsNullOrWhiteSpace(bookItem.Content))
-                        {
-                            bookItem.Content = content;
-                        }
-                    }
-                    Console.WriteLine("{0}:{1}:{2}", book.BookName, bookItem.ItemName, href);
-                    reptileTask.CurrentRecod = itemName;
-                    reptileTask.Updated = DateTime.Now;
-                    book.UpdateTime = DateTime.Today;
-                    DB.SaveChanges();
-                    continue;
+                    Console.WriteLine("{0}:已同步到最后结束........................................", bookName);
+                    return;
                 }
-                if (!isSaveChange && item.InnerHtml.Trim() == reptileTask.CurrentRecod.Trim())
+                bool isSaveChange = string.IsNullOrWhiteSpace(reptileTask.CurrentRecod);
+                var bookLasItem = DB.BookItem.Where(m => m.BookId == book.BookId).OrderByDescending(m => m.Pri).FirstOrDefault();
+                int pri = bookLasItem == null ? 0 : bookLasItem.Pri;
+                foreach (var item in items)
                 {
-
-                    string itemName = item.InnerHtml.Trim();
-                    var bookItem = DB.BookItem.FirstOrDefault(m => m.BookId == book.BookId && m.ItemName == itemName);
-                    if (bookItem != null && string.IsNullOrWhiteSpace(bookItem.Content))
+                    if (isSaveChange)
                     {
+                        string itemName = item.InnerHtml.Trim();
                         string href = item.GetAttribute("href");
                         href = "http://www.biquyun.com" + href;
                         string content = GetContent(href);
-                        bookItem.Content = content;
-                        bookItem.UpdateTime = DateTime.Now;
+                        var bookItem = DB.BookItem.FirstOrDefault(m => m.BookId == book.BookId && m.ItemName == itemName);
+                        if (bookItem == null)
+                        {
+                            pri++;
+                            bookItem = new BookItem()
+                            {
+                                BookId = book.BookId,
+                                ItemName = itemName,
+                                CreateTime = DateTime.Now,
+                                Content = content,
+                                UpdateTime = DateTime.Now,
+                                Pri = pri
+                            };
+                            DB.BookItem.Add(bookItem);
+                        }
+                        else
+                        {
+                            if (string.IsNullOrWhiteSpace(bookItem.Content))
+                            {
+                                bookItem.Content = content;
+                            }
+                        }
+                        Console.WriteLine("{0}:{1}:{2}", book.BookName, bookItem.ItemName, href);
+                        reptileTask.CurrentRecod = itemName;
+                        reptileTask.Updated = DateTime.Now;
+                        book.UpdateTime = DateTime.Today;
                         DB.SaveChanges();
+                        continue;
                     }
-                    isSaveChange = true;
-                    continue;
+                    if (!isSaveChange && item.InnerHtml.Trim() == reptileTask.CurrentRecod.Trim())
+                    {
+
+                        string itemName = item.InnerHtml.Trim();
+                        var bookItem = DB.BookItem.FirstOrDefault(m => m.BookId == book.BookId && m.ItemName == itemName);
+                        if (bookItem != null && string.IsNullOrWhiteSpace(bookItem.Content))
+                        {
+                            string href = item.GetAttribute("href");
+                            href = "http://www.biquyun.com" + href;
+                            string content = GetContent(href);
+                            bookItem.Content = content;
+                            bookItem.UpdateTime = DateTime.Now;
+                            DB.SaveChanges();
+                        }
+                        isSaveChange = true;
+                        continue;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                reptileTask.Remark = DateTime.Now + ex.Message;
+                reptileTask.Updated = DateTime.Now;
+                DB.SaveChanges();
+                throw ex;
             }
             Console.WriteLine("{0}:结束........................................", bookName);
         }

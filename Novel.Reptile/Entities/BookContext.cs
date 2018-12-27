@@ -22,7 +22,9 @@ namespace Novel.Reptile.Entities
         public virtual DbSet<BookItem> BookItem { get; set; }
         public virtual DbSet<BookReptileTask> BookReptileTask { get; set; }
         public virtual DbSet<BookShelf> BookShelf { get; set; }
+        public virtual DbSet<BookThumbsup> BookThumbsup { get; set; }
         public virtual DbSet<Sign> Sign { get; set; }
+        public virtual DbSet<TaskToDo> TaskToDo { get; set; }
         public virtual DbSet<UserInfo> UserInfo { get; set; }
         public virtual DbSet<UserRead> UserRead { get; set; }
 
@@ -31,7 +33,7 @@ namespace Novel.Reptile.Entities
             if (!optionsBuilder.IsConfigured)
             {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
-                optionsBuilder.UseSqlServer("Data Source=118.25.74.102;Initial Catalog=Book;Persist Security Info=True;User ID=sa;Password=1qaz!QAZ@WSX;");
+                optionsBuilder.UseSqlServer("");
             }
         }
 
@@ -90,6 +92,9 @@ namespace Novel.Reptile.Entities
 
             modelBuilder.Entity<BookIndex>(entity =>
             {
+                entity.HasKey(e => e.Id)
+                    .ForSqlServerIsClustered(false);
+
                 entity.Property(e => e.BookName)
                     .IsRequired()
                     .HasMaxLength(50);
@@ -103,6 +108,9 @@ namespace Novel.Reptile.Entities
             {
                 entity.HasKey(e => e.ItemId);
 
+                entity.HasIndex(e => new { e.ItemId, e.ItemName, e.BookId })
+                    .HasName("IX_BookItem");
+
                 entity.Property(e => e.CreateTime)
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("(getdate())");
@@ -110,6 +118,8 @@ namespace Novel.Reptile.Entities
                 entity.Property(e => e.ItemName)
                     .IsRequired()
                     .HasMaxLength(100);
+
+                entity.Property(e => e.Pri).HasColumnName("PRI");
 
                 entity.Property(e => e.UpdateTime).HasColumnType("datetime");
             });
@@ -142,11 +152,27 @@ namespace Novel.Reptile.Entities
                 entity.Property(e => e.UpdateTime).HasColumnType("datetime");
             });
 
+            modelBuilder.Entity<BookThumbsup>(entity =>
+            {
+                entity.Property(e => e.Date).HasColumnType("datetime");
+
+                entity.Property(e => e.Ip)
+                    .IsRequired()
+                    .HasMaxLength(50);
+            });
+
             modelBuilder.Entity<Sign>(entity =>
             {
                 entity.Property(e => e.CreateTime).HasColumnType("datetime");
 
                 entity.Property(e => e.UpdateTime).HasColumnType("datetime");
+            });
+
+            modelBuilder.Entity<TaskToDo>(entity =>
+            {
+                entity.Property(e => e.EndTime).HasColumnType("datetime");
+
+                entity.Property(e => e.Remark).HasMaxLength(50);
             });
 
             modelBuilder.Entity<UserInfo>(entity =>

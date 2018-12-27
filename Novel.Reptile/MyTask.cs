@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Novel.Reptile.Entities;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Novel.Reptile
 {
@@ -12,15 +14,14 @@ namespace Novel.Reptile
 
         public void Start()
         {
-            for (var i = 0; i < 15; i++)
-                StartAsync();
             taskCount = Tasks.Count;
+            for (var i = 0; i < 5; i++)
+                StartAsync();
         }
 
         private object _sync = new object();
 
         public event Action Completed;
-        public event Action AllTaskCompleted;
 
         public void StartAsync()
         {
@@ -30,23 +31,29 @@ namespace Novel.Reptile
                 {
                     var t = Tasks[Tasks.Count - 1];
                     Tasks.Remove(t);
-                    ThreadPool.QueueUserWorkItem(h =>
-                    {
 
+
+                    Task.Factory.StartNew(() =>
+                    {
                         try
                         {
                             t();
-                            
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine(ex.ToString());
                         }
+                        lock (_sync)
+                        {
+                            taskCount = taskCount - 1;
+                            if (taskCount == 0)
+                            {
+                                Completed?.Invoke();
+                            }
+                        }
                         StartAsync();
-                        
                     });
                 }
-                else Completed?.Invoke();
             }
         }
     }

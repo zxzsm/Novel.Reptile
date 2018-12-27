@@ -11,6 +11,5 @@ namespace Novel.Reptile.Entities
         public int BookId { get; set; }
         public string BookName { get; set; }
         public int ReadVolume { get; set; }
-        public int Recommend { get; set; }
     }
 }
