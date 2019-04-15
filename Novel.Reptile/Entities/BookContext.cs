@@ -23,17 +23,18 @@ namespace Novel.Reptile.Entities
         public virtual DbSet<BookReptileTask> BookReptileTask { get; set; }
         public virtual DbSet<BookShelf> BookShelf { get; set; }
         public virtual DbSet<BookThumbsup> BookThumbsup { get; set; }
-        public virtual DbSet<Sign> Sign { get; set; }
+        public virtual DbSet<Linksubmit> Linksubmit { get; set; }
         public virtual DbSet<TaskToDo> TaskToDo { get; set; }
         public virtual DbSet<UserInfo> UserInfo { get; set; }
         public virtual DbSet<UserRead> UserRead { get; set; }
+        public virtual DbSet<UserReadBookHistory> UserReadBookHistory { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
             {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
-                optionsBuilder.UseSqlServer("");
+                optionsBuilder.UseSqlServer(ConstCommon.ConnectionString);
             }
         }
 
@@ -161,11 +162,17 @@ namespace Novel.Reptile.Entities
                     .HasMaxLength(50);
             });
 
-            modelBuilder.Entity<Sign>(entity =>
+            modelBuilder.Entity<Linksubmit>(entity =>
             {
-                entity.Property(e => e.CreateTime).HasColumnType("datetime");
+                entity.Property(e => e.Result).HasMaxLength(500);
 
-                entity.Property(e => e.UpdateTime).HasColumnType("datetime");
+                entity.Property(e => e.UpdatedTime)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("(getdate())");
+
+                entity.Property(e => e.WebUrl)
+                    .IsRequired()
+                    .HasMaxLength(500);
             });
 
             modelBuilder.Entity<TaskToDo>(entity =>
@@ -203,6 +210,15 @@ namespace Novel.Reptile.Entities
                 entity.Property(e => e.CreateTime).HasColumnType("datetime");
 
                 entity.Property(e => e.UserId).ValueGeneratedOnAdd();
+            });
+
+            modelBuilder.Entity<UserReadBookHistory>(entity =>
+            {
+                entity.Property(e => e.CreateTime)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("(getdate())");
+
+                entity.Property(e => e.UpdateTime).HasColumnType("datetime");
             });
         }
     }

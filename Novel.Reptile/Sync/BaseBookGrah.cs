@@ -3,6 +3,7 @@ using AngleSharp.Parser.Html;
 using Novel.Reptile.Entities;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -13,6 +14,8 @@ namespace Novel.Reptile.Sync
     public class BaseBookGrah : IBookGrah, IDisposable
     {
         object _sync = new object();
+
+        protected readonly string ImageDomain = "http://image.shukelai.com";
         public virtual BookContext DB
         {
             get;
@@ -48,11 +51,24 @@ namespace Novel.Reptile.Sync
                     var t = response.Content.ReadAsStringAsync();
                     result = t.Result;
                 }
-                //else
-                //{
-                //    var t = response.Content.ReadAsStringAsync();
-                //    SimpleScriptingSample(t.Result);
-                //}
+                else
+                {
+                    var t = response.Content.ReadAsStringAsync();
+                    SimpleScriptingSample(t.Result);
+                    //这句话是关键点
+                    var cookies = response.Headers.GetValues("Set-Cookie");
+                    if (cookies != null && cookies.Count() > 0)
+                    {
+                        string jsluid = cookies.First();
+                        response.Headers.Add("Cookie", jsluid);
+                        response = httpClient.GetAsync(url).Result;
+                        response.Content.Headers.ContentType.CharSet = charset;
+                        var r = response.Content.ReadAsStringAsync();
+                        result = r.Result;
+                        // __jsluid = bfe8ff4240ecb6f7aa65f0958aa30579; max - age = 31536000; path =/; HttpOnly
+                    }
+
+                }
             }
             return result;
         }
@@ -64,7 +80,7 @@ namespace Novel.Reptile.Sync
             var parser = new HtmlParser(config);
 
             //This is our sample source, we will set the title and write on the document
-
+            //source = source.Replace("<script>", "").Replace("</script>", "").Replace("eval","return");
             var document = parser.Parse(source);
 
             //Modified HTML will be output
@@ -137,6 +153,42 @@ namespace Novel.Reptile.Sync
         {
             using (DB) { }
 
+        }
+        public void SaveImageUrl(string url, string saveFilePath)
+        {
+            if (File.Exists(saveFilePath))
+            {
+                return;
+            }
+            using (var client = new HttpClient())
+            {
+                System.IO.FileStream fs;
+                //文件名：序号+.jpg。可指定范围，以下是获取100.jpg~500.jpg.
+                var uri = new Uri(Uri.EscapeUriString(url));
+                byte[] urlContents = client.GetByteArrayAsync(uri).Result;
+                fs = new System.IO.FileStream(saveFilePath, System.IO.FileMode.OpenOrCreate);
+                fs.Write(urlContents, 0, urlContents.Length);
+            }
+
+        }
+
+        public string GetDomainUriString(Uri uri)
+        {
+            StringBuilder parentName = new StringBuilder();
+
+            // Append the scheme: http, ftp etc.
+            parentName.Append(uri.Scheme);
+
+            // Appned the '://' after the http, ftp etc.
+            parentName.Append("://");
+
+            // Append the host name www.foo.com
+            parentName.Append(uri.Host);
+            parentName.Append("/");
+            // Append each segment except the last one. The last one is the
+            // leaf and we will ignore it.
+           
+            return parentName.ToString();
         }
     }
 }

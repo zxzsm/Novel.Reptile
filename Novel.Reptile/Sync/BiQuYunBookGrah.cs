@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Dom;
+using AngleSharp.Dom.Html;
 using AngleSharp.Parser.Html;
 using Novel.Reptile.Entities;
 using System;
@@ -23,14 +24,17 @@ namespace Novel.Reptile.Sync
         }
         public override void Grah()
         {
+            string domainUrl = GetDomainUriString(new Uri(Url));
             var html = GetResponse(Url, "GBK");
             var parser = new HtmlParser();
             var document = parser.Parse(html);
+            var metas = document.QuerySelectorAll("meta");
+            var status = metas.FirstOrDefault(m => m.OuterHtml.Contains("og:novel:status")) as IHtmlMetaElement;
             //book name
             var bookName = document.QuerySelector("#info h1").InnerHtml;
             Console.WriteLine("{0}:读取中........................................", bookName);
             //图片
-            string imageUrl = document.QuerySelector("#fmimg img").GetAttribute("src");
+            string imageUrl = domainUrl + document.QuerySelector("#fmimg img").GetAttribute("src");
             //作者
             string author = document.QuerySelectorAll("#info p")[0].InnerHtml;
             author = author.Split(new char[] { ':', '：' }, StringSplitOptions.RemoveEmptyEntries)[1];
@@ -38,9 +42,20 @@ namespace Novel.Reptile.Sync
             var summary = document.QuerySelector("#intro").InnerHtml;
             string spell = Pinyin.GetPinyin(bookName).Replace(" ", "");
             string filePath = string.Format("{0}{1}{2}", ConstCommon.SAVEFOLDER, spell, Path.GetExtension(imageUrl));
-            //保存图片
-            SaveImageUrl(imageUrl, filePath);
-            Book book = GetBook(bookName, author, summary, "/files/bookimages/" + spell + Path.GetExtension(imageUrl));
+            //书籍图书url
+            string bookImageUrl = "";
+            if (!imageUrl.Contains("nocover.jpg"))
+            {
+                //保存图片
+                SaveImageUrl(imageUrl, filePath);
+                bookImageUrl = ImageDomain + "/files/bookimages/" + spell + Path.GetExtension(imageUrl);
+            }
+            else
+            {
+                bookImageUrl = ImageDomain + "/files/bookimages/nocover.png";
+            }
+            
+            Book book = GetBook(bookName, author, summary, bookImageUrl);
             BookReptileTask reptileTask = GetBookReptileTask(book);
             try
             {
@@ -113,7 +128,7 @@ namespace Novel.Reptile.Sync
             }
             catch (Exception ex)
             {
-                reptileTask.Remark = DateTime.Now + ex.Message;
+                reptileTask.Remark = DateTime.Now + ":" + ex.Message;
                 reptileTask.Updated = DateTime.Now;
                 DB.SaveChanges();
                 throw ex;
@@ -128,23 +143,7 @@ namespace Novel.Reptile.Sync
             var content = document.GetElementById("content");
             return content.InnerHtml;
         }
-        public void SaveImageUrl(string url, string saveFilePath)
-        {
-            if (File.Exists(saveFilePath))
-            {
-                return;
-            }
-            using (var client = new HttpClient())
-            {
-                System.IO.FileStream fs;
-                //文件名：序号+.jpg。可指定范围，以下是获取100.jpg~500.jpg.
-                var uri = new Uri(Uri.EscapeUriString(url));
-                byte[] urlContents = client.GetByteArrayAsync(uri).Result;
-                fs = new System.IO.FileStream(saveFilePath, System.IO.FileMode.OpenOrCreate);
-                fs.Write(urlContents, 0, urlContents.Length);
-            }
 
-        }
 
 
     }
