@@ -20,6 +20,7 @@ namespace Novel.Reptile.Entities
         public virtual DbSet<BookGroupCategroyRelation> BookGroupCategroyRelation { get; set; }
         public virtual DbSet<BookIndex> BookIndex { get; set; }
         public virtual DbSet<BookItem> BookItem { get; set; }
+        public virtual DbSet<BookLinks> BookLinks { get; set; }
         public virtual DbSet<BookReptileTask> BookReptileTask { get; set; }
         public virtual DbSet<BookShelf> BookShelf { get; set; }
         public virtual DbSet<BookThumbsup> BookThumbsup { get; set; }
@@ -33,7 +34,6 @@ namespace Novel.Reptile.Entities
         {
             if (!optionsBuilder.IsConfigured)
             {
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
                 optionsBuilder.UseSqlServer(ConstCommon.ConnectionString);
             }
         }
@@ -56,7 +56,7 @@ namespace Novel.Reptile.Entities
 
                 entity.Property(e => e.BookReleaseTime).HasColumnType("datetime");
 
-                entity.Property(e => e.BookSummary).HasMaxLength(800);
+                entity.Property(e => e.BookSummary).HasMaxLength(2000);
 
                 entity.Property(e => e.CreateTime)
                     .HasColumnType("datetime")
@@ -123,6 +123,13 @@ namespace Novel.Reptile.Entities
                 entity.Property(e => e.Pri).HasColumnName("PRI");
 
                 entity.Property(e => e.UpdateTime).HasColumnType("datetime");
+            });
+
+            modelBuilder.Entity<BookLinks>(entity =>
+            {
+                entity.Property(e => e.Url)
+                    .IsRequired()
+                    .HasMaxLength(300);
             });
 
             modelBuilder.Entity<BookReptileTask>(entity =>

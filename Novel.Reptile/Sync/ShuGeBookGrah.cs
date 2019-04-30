@@ -1,4 +1,5 @@
-﻿using AngleSharp.Parser.Html;
+﻿using AngleSharp.Dom.Html;
+using AngleSharp.Parser.Html;
 using Novel.Reptile.Entities;
 using System;
 using System.Collections.Generic;
@@ -21,14 +22,18 @@ namespace Novel.Reptile.Sync
         }
         public override void Grah()
         {
+            string domainUrl = GetDomainUriString(new Uri(Url));
             string html = GetResponse(Url, "utf-8");
             var parser = new HtmlParser();
             var document = parser.Parse(html);
+
+            var metas = document.QuerySelectorAll("meta");
+            var category = metas.FirstOrDefault(m => m.OuterHtml.Contains("og:novel:category")) as IHtmlMetaElement;
             //book name
             var bookName = document.QuerySelector("#info h1").InnerHtml;
             Console.WriteLine("{0}:读取中........................................", bookName);
             //图片
-            string imageUrl = "https://www.mxzw.com" + document.QuerySelector("#fmimg img").GetAttribute("src");
+            string imageUrl = domainUrl + document.QuerySelector("#fmimg img").GetAttribute("src");
             //作者
             string author = document.QuerySelectorAll("#info p")[0].InnerHtml;
             author = author.Split(new char[] { ':', '：' }, StringSplitOptions.RemoveEmptyEntries)[1];
@@ -40,8 +45,22 @@ namespace Novel.Reptile.Sync
             string spell = Pinyin.GetPinyin(bookName).Replace(" ", "");
             string filePath = string.Format("{0}{1}{2}", ConstCommon.SAVEFOLDER, spell, Path.GetExtension(imageUrl));
             //保存图片
-            SaveImageUrl(imageUrl, filePath);
+            string bookImageUrl = "";
+            if (CheckImageUrl(imageUrl))
+            {
+                //保存图片
+                SaveImageUrl(imageUrl, filePath);
+                bookImageUrl = ImageDomain + "/files/bookimages/" + spell + Path.GetExtension(imageUrl);
+            }
+            else
+            {
+                bookImageUrl = ImageDomain + "/files/bookimages/nocover.png";
+            }
             Book book = GetBook(bookName, author, summary, ImageDomain+"/files/bookimages/" + spell + Path.GetExtension(imageUrl));
+            if (category != null)
+            {
+                UpdateCatetory(book, category.Content);
+            }
             BookReptileTask reptileTask = GetBookReptileTask(book);
 
             try
@@ -145,6 +164,42 @@ namespace Novel.Reptile.Sync
                 content = content.Remove(content.IndexOf("<script>"));
             }
             return content;
+        }
+
+
+        private void UpdateCatetory(Book book, string catetory)
+        {
+            if (string.IsNullOrEmpty(catetory) || book == null)
+            {
+                return;
+            }
+            int catetoryId = 0;
+            catetory = catetory.Trim();
+            switch (catetory)
+            {
+                case "玄幻奇幻":
+                    catetoryId = 1;
+                    break;
+                case "都市言情":
+                    catetoryId = 2;
+                    break;
+                case "武侠仙侠":
+                    catetoryId = 3;
+                    break;
+                case "历史军事":
+                    catetoryId = 4;
+                    break;
+                case "网游竞技":
+                    catetoryId = 5;
+                    break;
+                case "科幻灵异":
+                    catetoryId = 6;
+                    break;
+                default:
+                    catetoryId = 0;
+                    break;
+            }
+            UpdateCatetory(book, catetoryId);
         }
     }
 }

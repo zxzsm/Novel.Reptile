@@ -120,6 +120,26 @@ namespace Novel.Reptile.Sync
             }
         }
 
+        public void UpdateCatetory(Book book, int catetoryId)
+        {
+            if (catetoryId == 0 || book == null)
+            {
+                return;
+            }
+            if (DB.BookGroupCategroyRelation.Any(m => m.BookId == book.BookId))
+            {
+                return;
+            }
+            DB.BookGroupCategroyRelation.Add(new BookGroupCategroyRelation
+            {
+                CategoryId = catetoryId,
+                BookId = book.BookId,
+                CreateTime = DateTime.Now,
+                UpdateTime = DateTime.Now
+            });
+            DB.SaveChanges();
+        }
+
         public BookReptileTask GetBookReptileTask(Book book)
         {
             lock (_sync)
@@ -169,9 +189,16 @@ namespace Novel.Reptile.Sync
                 fs = new System.IO.FileStream(saveFilePath, System.IO.FileMode.OpenOrCreate);
                 fs.Write(urlContents, 0, urlContents.Length);
             }
-
         }
 
+        public bool CheckImageUrl(string url)
+        {
+            using (var client = new HttpClient())
+            {
+                var response = client.GetAsync(url).Result;
+                return response.IsSuccessStatusCode;
+            }
+        }
         public string GetDomainUriString(Uri uri)
         {
             StringBuilder parentName = new StringBuilder();
@@ -187,7 +214,7 @@ namespace Novel.Reptile.Sync
             parentName.Append("/");
             // Append each segment except the last one. The last one is the
             // leaf and we will ignore it.
-           
+
             return parentName.ToString();
         }
     }

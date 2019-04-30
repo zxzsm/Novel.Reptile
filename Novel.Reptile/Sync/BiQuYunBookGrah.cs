@@ -29,12 +29,13 @@ namespace Novel.Reptile.Sync
             var parser = new HtmlParser();
             var document = parser.Parse(html);
             var metas = document.QuerySelectorAll("meta");
-            var status = metas.FirstOrDefault(m => m.OuterHtml.Contains("og:novel:status")) as IHtmlMetaElement;
+            var category = metas.FirstOrDefault(m => m.OuterHtml.Contains("og:novel:category")) as IHtmlMetaElement;
             //book name
             var bookName = document.QuerySelector("#info h1").InnerHtml;
             Console.WriteLine("{0}:读取中........................................", bookName);
             //图片
-            string imageUrl = domainUrl + document.QuerySelector("#fmimg img").GetAttribute("src");
+            string imageUrl = document.QuerySelector("#fmimg img").GetAttribute("src");
+            imageUrl = domainUrl + imageUrl;
             //作者
             string author = document.QuerySelectorAll("#info p")[0].InnerHtml;
             author = author.Split(new char[] { ':', '：' }, StringSplitOptions.RemoveEmptyEntries)[1];
@@ -44,7 +45,7 @@ namespace Novel.Reptile.Sync
             string filePath = string.Format("{0}{1}{2}", ConstCommon.SAVEFOLDER, spell, Path.GetExtension(imageUrl));
             //书籍图书url
             string bookImageUrl = "";
-            if (!imageUrl.Contains("nocover.jpg"))
+            if (CheckImageUrl(imageUrl))
             {
                 //保存图片
                 SaveImageUrl(imageUrl, filePath);
@@ -54,8 +55,13 @@ namespace Novel.Reptile.Sync
             {
                 bookImageUrl = ImageDomain + "/files/bookimages/nocover.png";
             }
-            
+
             Book book = GetBook(bookName, author, summary, bookImageUrl);
+            if (category != null)
+            {
+                UpdateCatetory(book, category.Content);
+            }
+
             BookReptileTask reptileTask = GetBookReptileTask(book);
             try
             {
@@ -145,6 +151,41 @@ namespace Novel.Reptile.Sync
         }
 
 
+        private void UpdateCatetory(Book book, string catetory)
+        {
+            if (string.IsNullOrEmpty(catetory) || book == null)
+            {
+                return;
+            }
+            int catetoryId = 0;
+            catetory = catetory.Trim();
+            switch (catetory)
+            {
+                case "玄幻小说":
+                    catetoryId = 1;
+                    break;
+                case "都市小说":
+                    catetoryId = 2;
+                    break;
+                case "修真小说":
+                    catetoryId = 3;
+                    break;
+                case "历史小说":
+                    catetoryId = 4;
+                    break;
+                case "网游小说":
+                    catetoryId = 5;
+                    break;
+                case "科幻小说":
+                case "恐怖小说":
+                    catetoryId = 6;
+                    break;
+                default:
+                    catetoryId = 0;
+                    break;
+            }
+            UpdateCatetory(book, catetoryId);
+        }
 
     }
 }
